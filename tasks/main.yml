@@ -1,0 +1,52 @@
+---
+- name: "Read additional vars files {{ proxmox_include_vars_files }}"
+  include_vars: "{{ item }}"
+  ignore_errors: true
+  loop: "{{ proxmox_include_vars_files }}"
+  when: proxmox_include_vars_files is defined
+- name: Create container
+  community.general.proxmox:
+    node: "{{ physical_host }}"
+    api_user: "{{ proxmox_api_user }}"
+    #api_token_id: "{{ proxmox_api_token_id }}"
+    #api_token_secret: "{{ proxmox_api_token_secret }}"
+    api_password: "{{ proxmox_api_password }}"
+    api_host: "{{ proxmox_api_host }}"
+    hostname: "{{ inventory_hostname }}"
+    ostemplate: "{{ proxmox_container_template_storage }}:vztmpl/{{ proxmox_container_template }}"
+    cpus: "{{ proxmox_container_cpus }}"
+    memory: "{{ proxmox_container_memory }}"
+    disk: "{{ proxmox_container_disk }}"
+    unprivileged: "{{ proxmox_container_unprivileged }}"
+    netif: "{{ proxmox_container_network }}"
+    state: present
+    pubkey: "{{ proxmox_container_root_ssh_pubkeys }}"
+    features: "{{ proxmox_container_features }}"
+  delegate_to: localhost
+  register: container_create
+- name: Wait till Container is available under the new name
+  pause:
+    seconds: 3
+  when: container_create.changed
+  tags:
+    - container
+- name: parse Container ID
+  set_fact:
+    container_id: "{{ container_create['msg'] | regex_search(' [0-9]+ ') | trim | int }}"
+    when: container_create.changed
+- name: Start container
+  community.general.proxmox:
+    node: "{{ physical_host }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    api_host: "{{ proxmox_api_host }}"
+    vmid: "{{ container_id }}"
+    state: started
+  delegate_to: localhost
+  when: container_create.changed
+  tags:
+    - container
+
+- name: Gather facts of new container 
+  gather_facts:
