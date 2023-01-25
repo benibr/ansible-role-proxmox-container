@@ -9,7 +9,7 @@ proxmox_container_cpus: 1
 proxmox_container_memory: 1024
 # proxmox_container_disk: "<storage>:<size in GB>"
 proxmox_container_disk: "{{ proxmox_storagepool }}:4"
-proxmox_container_template: "debian-11-standard_11.3-1_amd64.tar.zst"
+proxmox_container_template: "debian-11-standard_11.6-1_amd64.tar.zst"
 proxmox_container_template_storage: "local"
 proxmox_container_mac_address: "{{ '66:36:71' | community.general.random_mac(seed=inventory_hostname) }}"
 proxmox_container_network: '{"net0":"name=eth0,hwaddr={{ proxmox_container_mac_address }},ip=dhcp,ip6=auto,bridge=vmbr0"}'
