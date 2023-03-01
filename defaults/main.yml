@@ -15,3 +15,4 @@ proxmox_container_mac_address: "{{ '66:36:71' | community.general.random_mac(see
 proxmox_container_network: '{"net0":"name=eth0,hwaddr={{ proxmox_container_mac_address }},ip=dhcp,ip6=auto,bridge=vmbr0"}'
 proxmox_container_root_ssh_pubkeys: ""
 proxmox_container_unprivileged: true
+proxmox_container_enable_tun: false

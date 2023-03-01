@@ -4,6 +4,8 @@
   ignore_errors: true
   loop: "{{ proxmox_include_vars_files }}"
   when: proxmox_include_vars_files is defined
+  tags:
+    - container
 - name: Create container
   community.general.proxmox:
     node: "{{ physical_host }}"
@@ -30,22 +32,51 @@
   when: container_create.changed
   tags:
     - container
-- name: parse Container ID
-  set_fact:
-    container_id: "{{ container_create['msg'] | regex_search(' [0-9]+ ') | trim | int }}"
-    when: container_create.changed
-- name: Start container
+- name: Read container new ID
   community.general.proxmox:
     node: "{{ physical_host }}"
     api_user: "{{ proxmox_api_user }}"
-    api_token_id: "{{ proxmox_api_token_id }}"
-    api_token_secret: "{{ proxmox_api_token_secret }}"
+    api_password: "{{ proxmox_api_password }}"
     api_host: "{{ proxmox_api_host }}"
-    vmid: "{{ container_id }}"
-    state: started
+    hostname: "{{ inventory_hostname }}"
+    state: stopped
   delegate_to: localhost
+  register: container_id
   when: container_create.changed
   tags:
+    - container
+- name: Read container existing ID and start container
+  community.general.proxmox:
+    node: "{{ physical_host }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_password: "{{ proxmox_api_password }}"
+    api_host: "{{ proxmox_api_host }}"
+    hostname: "{{ inventory_hostname }}"
+    state: started
+  delegate_to: localhost
+  register: container_id
+  when: not container_create.changed
+  tags:
+    - container
+- name: parse Container ID
+  set_fact:
+    container_id: "{{ container_id['msg'] | regex_search(' [0-9]+ ') | trim | int }}"
+  tags:
+    - container
+- debug:
+    var: container_id
+- name: enable tun devices in container
+  blockinfile:
+    path: /etc/pve/lxc/{{ container_id }}.conf
+    block: |
+      lxc.cgroup2.devices.allow: c 10:200 rwm
+      lxc.mount.entry: /dev/net dev/net none bind,create=dir
+  delegate_to: "{{ physical_host }}"
+  when:
+    - proxmox_container_enable_tun == true
+  tags:
+    - vpn
+    - tun
     - container
 
 - name: Gather facts of new container 
